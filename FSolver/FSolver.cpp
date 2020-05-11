@@ -1,20 +1,80 @@
-// FSolver.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
+#include <mpi.h>
+#include <stdio.h>
+#include <string>
 #include <iostream>
+#include <thread>
+#include <chrono>
 
-int main()
-{
-    std::cout << "Hello World!\n";
+using namespace std;
+
+int calculateFlatIndex(int dim, int i, int j, int k) {
+    return i * dim * dim + j * dim + k;
 }
 
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
+void fillWithZeros(double* cube, int dim) {
+    for (int i = 0; i < dim; i++) {
+        for (int j = 0; j < dim; j++) {
+            for (int k = 0; k < dim; k++) {
+                cube[calculateFlatIndex(dim, i, j, k)] = 0;
+            }
+        }
+    }
+}
 
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
+void print(double* cube, int dim) {
+    for (int i = 0; i < dim; i++) {
+        for (int j = 0; j < dim; j++) {
+            for (int k = 0; k < dim; k++) {
+                cout << cube[calculateFlatIndex(dim, i, j, k)] << " ";
+            }
+            cout << endl;
+        }
+        cout << endl;
+    }
+}
+
+bool isWholeNumber(double num)
+{
+    return num == static_cast<int>(num);
+}
+
+int main(int argc, char* argv[]) {
+
+    int numberOfTasks, rank;
+
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &numberOfTasks);
+
+    double subcubePerDimension = cbrt(numberOfTasks);
+
+    if (!isWholeNumber(subcubePerDimension)) {
+        cout << "number of tasks is not cube root of a whole number!" << endl;
+        return 0;
+    }
+
+    int cubeDimension = stoi(argv[1]);
+
+    double subcubeDimension = cubeDimension / subcubePerDimension;
+
+    if (!isWholeNumber(subcubeDimension)) {
+        cout << "subcube dimension is not a whole number!" << endl;
+        return 0;
+    }
+
+    const int pointsPerEdge = subcubeDimension + 1;
+
+    double *subcube = new double[pointsPerEdge * pointsPerEdge * pointsPerEdge];
+
+    fillWithZeros(subcube, pointsPerEdge);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(rank * 100));
+
+    cout << "Rank: " << rank << endl;
+
+    print(subcube, pointsPerEdge);
+ 
+    MPI_Finalize();
+
+    return 0;
+}
