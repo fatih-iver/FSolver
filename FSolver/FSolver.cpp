@@ -139,45 +139,31 @@ int main(int argc, char* argv[]) {
 
     Offset myNormalizedOffset = {myOffset.I / pointsPerSubEdge, myOffset.J / pointsPerSubEdge, myOffset.K / pointsPerSubEdge };
 
-    /*
-
     // Neighbours -----------------------------------------------------------------------------------
 
-    int*** neighbours  = new int** [subcubePerDimension];
+    int*** neighbours  = new int** [subcubePerEdge];
 
-    for (int i = 0; i < subcubePerDimension; i++) {
+    for (int i = 0; i < subcubePerEdge; i++) {
         
-        neighbours[i] = new int* [subcubePerDimension];
+        neighbours[i] = new int* [subcubePerEdge];
 
-        for (int j = 0; j < subcubePerDimension; j++) {
+        for (int j = 0; j < subcubePerEdge; j++) {
            
-            neighbours[i][j] = new int[subcubePerDimension];
+            neighbours[i][j] = new int[subcubePerEdge];
        
         }
 
     }
 
-    for (int i = 0; i < subcubePerDimension; i++) {
-        for (int j = 0; j < subcubePerDimension; j++) {
-            for (int k = 0; k < subcubePerDimension; k++) {
-                neighbours[i][j][k] = calculateFlatIndex(subcubePerDimension, i, j, k);
+    for (int i = 0; i < subcubePerEdge; i++) {
+        for (int j = 0; j < subcubePerEdge; j++) {
+            for (int k = 0; k < subcubePerEdge; k++) {
+                neighbours[i][j][k] = calculateFlatIndex(subcubePerEdge, i, j, k);
             }
         }
     }
 
-   
-
-    if (myRank == 0) {
-        for (int i = 0; i < subcubePerDimension; i++) {
-            for (int j = 0; j < subcubePerDimension; j++) {
-                for (int k = 0; k < subcubePerDimension; k++) {
-                    cout << " " << i << " " << j << " " << k << " : " << neighbours[i][j][k] << endl;
-                }
-            }
-        }
-    }
-
-    
+    // Find Neighbours ---------------------------------------------------------------------------------------
 
     int ME = myRank;
 
@@ -194,7 +180,7 @@ int main(int argc, char* argv[]) {
         UP = neighbours[myNormalizedOffset.I - 1][myNormalizedOffset.J][myNormalizedOffset.K];
     }
 
-    if (myNormalizedOffset.I + 1 < subcubePerDimension) {
+    if (myNormalizedOffset.I + 1 < subcubePerEdge) {
         DOWN = neighbours[myNormalizedOffset.I + 1][myNormalizedOffset.J][myNormalizedOffset.K];
     }
 
@@ -202,7 +188,7 @@ int main(int argc, char* argv[]) {
         LEFT = neighbours[myNormalizedOffset.I][myNormalizedOffset.J - 1][myNormalizedOffset.K];
     }
 
-    if (myNormalizedOffset.J + 1 < subcubePerDimension) {
+    if (myNormalizedOffset.J + 1 < subcubePerEdge) {
         RIGHT = neighbours[myNormalizedOffset.I][myNormalizedOffset.J + 1][myNormalizedOffset.K];
     }
 
@@ -210,37 +196,10 @@ int main(int argc, char* argv[]) {
         BACK = neighbours[myNormalizedOffset.I][myNormalizedOffset.J][myNormalizedOffset.K - 1];
     }
 
-    if (myNormalizedOffset.K + 1 < subcubePerDimension) {
+    if (myNormalizedOffset.K + 1 < subcubePerEdge) {
         FRONT = neighbours[myNormalizedOffset.I][myNormalizedOffset.J][myNormalizedOffset.K + 1];
     }
     
-    // Sleep ---------------------------------------------------------------------------------
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(myRank * 250));
-
-    if (myRank == 0) {
-        
-        cout << "Number of tasks: " << numberOfTasks << endl;
-        cout << "Cube Dimension: " << cubeDimension << endl;
-        cout << "Subcube Dimension: " << subcubeDimension << endl;
-
-        cout << "Cube Volume: " << cubeDimension * cubeDimension * cubeDimension << endl;
-        cout << "Subcube Volume: " << subcubeDimension * subcubeDimension * subcubeDimension << endl;
-    
-    }
-
-    cout << endl << "My Rank: " << myRank << endl;
-
-    cout << "My Offset: " << myOffset.I << " " << myOffset.J << " " << myOffset.K << endl;
-
-    cout << "Flat : " << offsetFlatIndex << endl;
-
-    cout << "Neighbours:" << " U " << UP << " D " << DOWN << " L " << LEFT << " R " << RIGHT << " F " << FRONT << " B " << BACK << endl;
-   
-    // Finalize -----------------------------------------------------------------------------------
-
-    */
-
     // DEBUG INFO -------------------------------------------------------------------------------------------
 
     std::this_thread::sleep_for(std::chrono::milliseconds(myRank * 250));
@@ -268,6 +227,7 @@ int main(int argc, char* argv[]) {
 
     cout << "My Normalized Offset: " << myNormalizedOffset.I << " " << myNormalizedOffset.J << " " << myNormalizedOffset.K << endl;
 
+    cout << "Neighbours:" << " U " << UP << " D " << DOWN << " L " << LEFT << " R " << RIGHT << " F " << FRONT << " B " << BACK << endl;
 
     cout << endl;
 
