@@ -115,27 +115,31 @@ int main(int argc, char* argv[]) {
 
     int pointsPerSubEdge = (int) _pointsPerSubEdge;
 
+    int pointsPerGhostEdge = 1 + pointsPerSubEdge + 1;
+
     // Subcube - Initialization -------------------------------------------------------------
 
     double *subcube = new double[pointsPerSubEdge * pointsPerSubEdge * pointsPerSubEdge];
 
     fillWithZeros(subcube, pointsPerSubEdge);
 
-    /*
+    double* ghostCube = new double[pointsPerGhostEdge * pointsPerGhostEdge * pointsPerGhostEdge];
+
+    fillWithZeros(ghostCube, pointsPerGhostEdge);
+
+    
 
     // Offsets -------------------------------------------------------------------------------------
 
     struct Offset myOffset;
 
-    calculateMyOffset(myRank, cubeDimension, subcubeDimension, myOffset);
-
-    Offset myNormalizedOffset;
-
-    myNormalizedOffset.I = myOffset.I / subcubeDimension;
-    myNormalizedOffset.J = myOffset.J / subcubeDimension;
-    myNormalizedOffset.K = myOffset.K / subcubeDimension;
+    calculateMyOffset(myRank, pointsPerEdge, pointsPerSubEdge, myOffset);
 
     int offsetFlatIndex = calculateFlatOffset(pointsPerEdge, myOffset);
+
+    Offset myNormalizedOffset = {myOffset.I / pointsPerSubEdge, myOffset.J / pointsPerSubEdge, myOffset.K / pointsPerSubEdge };
+
+    /*
 
     // Neighbours -----------------------------------------------------------------------------------
 
@@ -251,15 +255,25 @@ int main(int argc, char* argv[]) {
         cout << "n: " << n << endl;
         cout << "Points per Edge: " << pointsPerEdge << endl;
         cout << "Points per Sub Edge: " << pointsPerSubEdge << endl;
+        cout << "Points per Ghost Edge: " << pointsPerGhostEdge << endl;
         cout << endl;
     
     }
 
     cout << "My Rank: " << myRank << endl;
 
+    cout << "My Offset: " << myOffset.I << " " << myOffset.J << " " << myOffset.K << endl;
+
+    cout << "My Flat Offset : " << offsetFlatIndex << endl;
+
+    cout << "My Normalized Offset: " << myNormalizedOffset.I << " " << myNormalizedOffset.J << " " << myNormalizedOffset.K << endl;
+
+
     cout << endl;
 
     print(subcube, pointsPerSubEdge);
+
+    //print(ghostCube, pointsPerGhostEdge);
 
     // Finalize -------------------------------------------------------------------------------------------
 
