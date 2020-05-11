@@ -29,11 +29,11 @@ void fillWithZeros(double* cube, int pointsPerEdge) {
     }
 }
 
-void print(double* cube, int dim) {
-    for (int i = 0; i < dim; i++) {
-        for (int j = 0; j < dim; j++) {
-            for (int k = 0; k < dim; k++) {
-                cout << cube[calculateFlatIndex(dim, i, j, k)] << " ";
+void print(double* cube, int pointsPerEdge) {
+    for (int i = 0; i < pointsPerEdge; i++) {
+        for (int j = 0; j < pointsPerEdge; j++) {
+            for (int k = 0; k < pointsPerEdge; k++) {
+                cout << cube[calculateFlatIndex(pointsPerEdge, i, j, k)] << " ";
             }
             cout << endl;
         }
@@ -93,35 +93,35 @@ int main(int argc, char* argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
     MPI_Comm_size(MPI_COMM_WORLD, &numberOfTasks);
 
-    // Pre-Checks -------------------------------------------------------------------------------------
+    // Points per Edge Calculations -------------------------------------------------------------------------------------
 
-    double subcubePerDimension = cbrt(numberOfTasks);
+    double subcubePerEdge = cbrt(numberOfTasks);
 
-    if (!isWholeNumber(subcubePerDimension)) {
-        cout << "number of tasks is not cube root of a whole number!" << endl;
+    if (!isWholeNumber(subcubePerEdge)) {
+        cout << "cube root of number of tasks is not a whole number!" << endl;
         return 0;
     }
 
-    int cubeDimension = stoi(argv[1]);
+    int n = stoi(argv[1]);
 
-    double subcubeDimension = cubeDimension / subcubePerDimension;
+    int pointsPerEdge = n + 1;
 
-    if (!isWholeNumber(subcubeDimension)) {
-        cout << "subcube dimension is not a whole number!" << endl;
+    double _pointsPerSubEdge = pointsPerEdge / subcubePerEdge;
+
+    if (!isWholeNumber(_pointsPerSubEdge)) {
+        cout << "points per subcube is not a whole number!" << endl;
         return 0;
     }
 
-    // Point - Calculations -------------------------------------------------------------
-
-    const int pointsPerEdge = cubeDimension + 1;
-
-    const int pointsPerSubEdge = subcubeDimension + 1;
+    int pointsPerSubEdge = (int) _pointsPerSubEdge;
 
     // Subcube - Initialization -------------------------------------------------------------
 
     double *subcube = new double[pointsPerSubEdge * pointsPerSubEdge * pointsPerSubEdge];
 
     fillWithZeros(subcube, pointsPerSubEdge);
+
+    /*
 
     // Offsets -------------------------------------------------------------------------------------
 
@@ -161,7 +161,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    /*
+   
 
     if (myRank == 0) {
         for (int i = 0; i < subcubePerDimension; i++) {
@@ -173,7 +173,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    */
+    
 
     int ME = myRank;
 
@@ -234,6 +234,34 @@ int main(int argc, char* argv[]) {
     cout << "Neighbours:" << " U " << UP << " D " << DOWN << " L " << LEFT << " R " << RIGHT << " F " << FRONT << " B " << BACK << endl;
    
     // Finalize -----------------------------------------------------------------------------------
+
+    */
+
+    // DEBUG INFO -------------------------------------------------------------------------------------------
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(myRank * 250));
+
+    if (myRank == 0) {
+    
+        cout << "-------- DEBUG INFO --------" << endl;
+
+        cout << endl;
+        cout << "Number of Tasks: " << numberOfTasks << endl;
+        cout << "Subcube Per Edge: " << subcubePerEdge << endl;
+        cout << "n: " << n << endl;
+        cout << "Points per Edge: " << pointsPerEdge << endl;
+        cout << "Points per Sub Edge: " << pointsPerSubEdge << endl;
+        cout << endl;
+    
+    }
+
+    cout << "My Rank: " << myRank << endl;
+
+    cout << endl;
+
+    print(subcube, pointsPerSubEdge);
+
+    // Finalize -------------------------------------------------------------------------------------------
 
     MPI_Finalize();
 
