@@ -7,6 +7,10 @@
 
 using namespace std;
 
+struct Offset {
+    int I, J, K;
+};
+
 int calculateFlatIndex(int dim, int i, int j, int k) {
     return i * dim * dim + j * dim + k;
 }
@@ -38,12 +42,43 @@ bool isWholeNumber(double num)
     return num == static_cast<int>(num);
 }
 
+void calculateMyOffset(int myRank, int cubeDimension, int subcubeDimension, Offset &myOffset) {
+
+    myOffset.I = 0;
+    myOffset.J = 0;
+    myOffset.K = 0;
+
+    for (int i = 0; i < myRank; i++) {
+
+        myOffset.K += subcubeDimension;
+
+        if (myOffset.K == cubeDimension) {
+
+            myOffset.K = 0;
+
+            myOffset.J += subcubeDimension;
+
+            if (myOffset.J == cubeDimension) {
+
+                myOffset.J = 0;
+
+                myOffset.I += subcubeDimension;
+            }
+
+        }
+
+    }
+
+
+
+}
+
 int main(int argc, char* argv[]) {
 
-    int numberOfTasks, rank;
+    int numberOfTasks, myRank;
 
     MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
     MPI_Comm_size(MPI_COMM_WORLD, &numberOfTasks);
 
     double subcubePerDimension = cbrt(numberOfTasks);
@@ -68,12 +103,16 @@ int main(int argc, char* argv[]) {
 
     fillWithZeros(subcube, pointsPerEdge);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(rank * 100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(myRank * 250));
 
-    cout << "Rank: " << rank << endl;
+    struct Offset myOffset;
 
-    print(subcube, pointsPerEdge);
- 
+    calculateMyOffset(myRank, cubeDimension, subcubeDimension, myOffset);
+
+    cout << "My Rank: " << myRank << endl;
+
+    cout << "My Offset: " << myOffset.I << " " << myOffset.J << " " << myOffset.K << endl;
+
     MPI_Finalize();
 
     return 0;
