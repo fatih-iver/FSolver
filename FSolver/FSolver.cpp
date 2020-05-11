@@ -117,25 +117,117 @@ int main(int argc, char* argv[]) {
 
     fillWithZeros(subcube, pointsPerSubEdge);
 
-    // Sleep ---------------------------------------------------------------------------------
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(myRank * 250));
-
     // Offsets -------------------------------------------------------------------------------------
 
     struct Offset myOffset;
 
     calculateMyOffset(myRank, cubeDimension, subcubeDimension, myOffset);
 
+    Offset myNormalizedOffset;
+
+    myNormalizedOffset.I = myOffset.I / subcubeDimension;
+    myNormalizedOffset.J = myOffset.J / subcubeDimension;
+    myNormalizedOffset.K = myOffset.K / subcubeDimension;
+
     int offsetFlatIndex = calculateFlatOffset(pointsPerEdge, myOffset);
 
-    cout << "My Rank: " << myRank << endl;
+    // Neighbours -----------------------------------------------------------------------------------
+
+    int*** neighbours  = new int** [subcubePerDimension];
+
+    for (int i = 0; i < subcubePerDimension; i++) {
+        
+        neighbours[i] = new int* [subcubePerDimension];
+
+        for (int j = 0; j < subcubePerDimension; j++) {
+           
+            neighbours[i][j] = new int[subcubePerDimension];
+       
+        }
+
+    }
+
+    for (int i = 0; i < subcubePerDimension; i++) {
+        for (int j = 0; j < subcubePerDimension; j++) {
+            for (int k = 0; k < subcubePerDimension; k++) {
+                neighbours[i][j][k] = calculateFlatIndex(subcubePerDimension, i, j, k);
+            }
+        }
+    }
+
+    /*
+
+    if (myRank == 0) {
+        for (int i = 0; i < subcubePerDimension; i++) {
+            for (int j = 0; j < subcubePerDimension; j++) {
+                for (int k = 0; k < subcubePerDimension; k++) {
+                    cout << " " << i << " " << j << " " << k << " : " << neighbours[i][j][k] << endl;
+                }
+            }
+        }
+    }
+
+    */
+
+    int ME = myRank;
+
+    int UP = -1;
+    int DOWN = -1;
+    
+    int LEFT = -1;
+    int RIGHT = -1;
+
+    int FRONT = - 1;
+    int BACK = -1;
+
+    if (myNormalizedOffset.I - 1 >= 0) {
+        UP = neighbours[myNormalizedOffset.I - 1][myNormalizedOffset.J][myNormalizedOffset.K];
+    }
+
+    if (myNormalizedOffset.I + 1 < subcubePerDimension) {
+        DOWN = neighbours[myNormalizedOffset.I + 1][myNormalizedOffset.J][myNormalizedOffset.K];
+    }
+
+    if (myNormalizedOffset.J - 1 >= 0) {
+        LEFT = neighbours[myNormalizedOffset.I][myNormalizedOffset.J - 1][myNormalizedOffset.K];
+    }
+
+    if (myNormalizedOffset.J + 1 < subcubePerDimension) {
+        RIGHT = neighbours[myNormalizedOffset.I][myNormalizedOffset.J + 1][myNormalizedOffset.K];
+    }
+
+    if (myNormalizedOffset.K - 1 >= 0) {
+        BACK = neighbours[myNormalizedOffset.I][myNormalizedOffset.J][myNormalizedOffset.K - 1];
+    }
+
+    if (myNormalizedOffset.K + 1 < subcubePerDimension) {
+        FRONT = neighbours[myNormalizedOffset.I][myNormalizedOffset.J][myNormalizedOffset.K + 1];
+    }
+    
+    // Sleep ---------------------------------------------------------------------------------
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(myRank * 250));
+
+    if (myRank == 0) {
+        
+        cout << "Number of tasks: " << numberOfTasks << endl;
+        cout << "Cube Dimension: " << cubeDimension << endl;
+        cout << "Subcube Dimension: " << subcubeDimension << endl;
+
+        cout << "Cube Volume: " << cubeDimension * cubeDimension * cubeDimension << endl;
+        cout << "Subcube Volume: " << subcubeDimension * subcubeDimension * subcubeDimension << endl;
+    
+    }
+
+    cout << endl << "My Rank: " << myRank << endl;
 
     cout << "My Offset: " << myOffset.I << " " << myOffset.J << " " << myOffset.K << endl;
 
     cout << "Flat : " << offsetFlatIndex << endl;
 
-    // Neighbours -----------------------------------------------------------------------------------
+    cout << "Neighbours:" << " U " << UP << " D " << DOWN << " L " << LEFT << " R " << RIGHT << " F " << FRONT << " B " << BACK << endl;
+   
+    // Finalize -----------------------------------------------------------------------------------
 
     MPI_Finalize();
 
