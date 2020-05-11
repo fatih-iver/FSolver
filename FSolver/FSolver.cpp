@@ -73,8 +73,14 @@ void calculateMyOffset(int myRank, int cubeDimension, int subcubeDimension, Offs
 
     }
 
+}
 
+double u(double x, double y, double z) {
+    return x * y * z;
+}
 
+double f(double x, double y, double z) {
+    return 1 + 1 + 1;
 }
 
 int main(int argc, char* argv[]) {
