@@ -11,15 +11,19 @@ struct Offset {
     int I, J, K;
 };
 
-int calculateFlatIndex(int dim, int i, int j, int k) {
-    return i * dim * dim + j * dim + k;
+int calculateFlatIndex(int pointsPerEdge, int i, int j, int k) {
+    return i * pointsPerEdge * pointsPerEdge + j * pointsPerEdge + k;
 }
 
-void fillWithZeros(double* cube, int dim) {
-    for (int i = 0; i < dim; i++) {
-        for (int j = 0; j < dim; j++) {
-            for (int k = 0; k < dim; k++) {
-                cube[calculateFlatIndex(dim, i, j, k)] = 0;
+int calculateFlatOffset(int pointsPerEdge, Offset myOffset) {
+    return calculateFlatIndex(pointsPerEdge, myOffset.I, myOffset.J, myOffset.K);
+}
+
+void fillWithZeros(double* cube, int pointsPerEdge) {
+    for (int i = 0; i < pointsPerEdge; i++) {
+        for (int j = 0; j < pointsPerEdge; j++) {
+            for (int k = 0; k < pointsPerEdge; k++) {
+                cube[calculateFlatIndex(pointsPerEdge, i, j, k)] = 0;
             }
         }
     }
@@ -75,11 +79,15 @@ void calculateMyOffset(int myRank, int cubeDimension, int subcubeDimension, Offs
 
 int main(int argc, char* argv[]) {
 
+    // MPI-Initialization -----------------------------------------------------------------------------
+
     int numberOfTasks, myRank;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
     MPI_Comm_size(MPI_COMM_WORLD, &numberOfTasks);
+
+    // Pre-Checks -------------------------------------------------------------------------------------
 
     double subcubePerDimension = cbrt(numberOfTasks);
 
@@ -97,21 +105,37 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    const int pointsPerEdge = subcubeDimension + 1;
+    // Point - Calculations -------------------------------------------------------------
 
-    double *subcube = new double[pointsPerEdge * pointsPerEdge * pointsPerEdge];
+    const int pointsPerEdge = cubeDimension + 1;
 
-    fillWithZeros(subcube, pointsPerEdge);
+    const int pointsPerSubEdge = subcubeDimension + 1;
+
+    // Subcube - Initialization -------------------------------------------------------------
+
+    double *subcube = new double[pointsPerSubEdge * pointsPerSubEdge * pointsPerSubEdge];
+
+    fillWithZeros(subcube, pointsPerSubEdge);
+
+    // Sleep ---------------------------------------------------------------------------------
 
     std::this_thread::sleep_for(std::chrono::milliseconds(myRank * 250));
+
+    // Offsets -------------------------------------------------------------------------------------
 
     struct Offset myOffset;
 
     calculateMyOffset(myRank, cubeDimension, subcubeDimension, myOffset);
 
+    int offsetFlatIndex = calculateFlatOffset(pointsPerEdge, myOffset);
+
     cout << "My Rank: " << myRank << endl;
 
     cout << "My Offset: " << myOffset.I << " " << myOffset.J << " " << myOffset.K << endl;
+
+    cout << "Flat : " << offsetFlatIndex << endl;
+
+    // Neighbours -----------------------------------------------------------------------------------
 
     MPI_Finalize();
 
