@@ -29,12 +29,12 @@ void fillWithZeros(double* cube, int pointsPerEdge) {
     }
 }
 
-void fillByEnumerating(double* cube, int pointsPerEdge) {
+void fillByEnumerating(double* cube, int pointsPerEdge, int offset) {
     for (int i = 0; i < pointsPerEdge; i++) {
         for (int j = 0; j < pointsPerEdge; j++) {
             for (int k = 0; k < pointsPerEdge; k++) {
                 int flatIndex = calculateFlatIndex(pointsPerEdge, i, j, k);
-                cube[flatIndex] = flatIndex;
+                cube[flatIndex] = offset + flatIndex;
             }
         }
     }
@@ -92,6 +92,12 @@ void printBuffer(double* buffer, int bufferSize) {
         cout << buffer[i] << " ";
     }
     cout << endl;
+}
+
+void fillBufferWithZeros(double* buffer, int bufferSize) {
+    for (int i = 0; i < bufferSize; i++) {
+        buffer[i] = 0;
+    }
 }
 
 double u(double x, double y, double z) {
@@ -222,11 +228,18 @@ int main(int argc, char* argv[]) {
     int bufferSize = pointsPerSubEdge * pointsPerSubEdge;
 
     double* upBuffer = new double[bufferSize];
+    fillBufferWithZeros(upBuffer, bufferSize);
     double* downBuffer = new double[bufferSize];
+    fillBufferWithZeros(downBuffer, bufferSize);
     double* frontBuffer = new double[bufferSize];
+    fillBufferWithZeros(frontBuffer, bufferSize);
     double* backBuffer = new double[bufferSize];
+    fillBufferWithZeros(backBuffer, bufferSize);
     double* leftBuffer = new double[bufferSize];
+    fillBufferWithZeros(leftBuffer, bufferSize);
     double* rightBuffer = new double[bufferSize];
+    fillBufferWithZeros(rightBuffer, bufferSize);
+
 
     // Layer Calculations ----------------------------------------------------------------------------------
 
@@ -259,36 +272,39 @@ int main(int argc, char* argv[]) {
 
     // Send --------------------------------------------------------------------------------
 
+    fillByEnumerating(subcube, pointsPerSubEdge, myRank * pointsPerSubEdge * pointsPerSubEdge * pointsPerSubEdge);
+    
+
     // Send Up Layer
     if (UP_NEIGHBOUR != -1) {
-        MPI_Send(&subcube[0], pointsPerSubEdge * pointsPerSubEdge, XZLayerDataType, UP_NEIGHBOUR, UP_LAYER_TAG, MPI_COMM_WORLD);
+        MPI_Send(&subcube[0], 1, XZLayerDataType, UP_NEIGHBOUR, UP_LAYER_TAG, MPI_COMM_WORLD);
     }
 
     // Send Down Layer
     if (DOWN_NEIGHBOUR != -1) {
-        MPI_Send(&subcube[pointsPerSubEdge * pointsPerSubEdge * (pointsPerSubEdge - 1)], pointsPerSubEdge * pointsPerSubEdge, XZLayerDataType, DOWN_NEIGHBOUR, DOWN_LAYER_TAG, MPI_COMM_WORLD);
+        MPI_Send(&subcube[pointsPerSubEdge * pointsPerSubEdge * (pointsPerSubEdge - 1)], 1, XZLayerDataType, DOWN_NEIGHBOUR, DOWN_LAYER_TAG, MPI_COMM_WORLD);
     }
 
     // Send Front Layer
     if (FRONT_NEIGHBOUR != -1) {
-        MPI_Send(&subcube[pointsPerEdge - 1], pointsPerSubEdge * pointsPerSubEdge, XYLayerDataType, FRONT_NEIGHBOUR, FRONT_LAYER_TAG, MPI_COMM_WORLD);
+        MPI_Send(&subcube[pointsPerSubEdge - 1], 1, XYLayerDataType, FRONT_NEIGHBOUR, FRONT_LAYER_TAG, MPI_COMM_WORLD);
     }
 
     // Send Back Layer
     if (BACK_NEIGHBOUR != -1) {
-        MPI_Send(&subcube[0], pointsPerSubEdge * pointsPerSubEdge, XYLayerDataType, BACK_NEIGHBOUR, BACK_LAYER_TAG, MPI_COMM_WORLD);
+        MPI_Send(&subcube[0], 1, XYLayerDataType, BACK_NEIGHBOUR, BACK_LAYER_TAG, MPI_COMM_WORLD);
     }
 
     // Send Left Layer
     if (LEFT_NEIGHBOUR != -1) {
-        MPI_Send(&subcube[0], pointsPerSubEdge * pointsPerSubEdge, YZLayerDataType, LEFT_NEIGHBOUR, LEFT_LAYER_TAG, MPI_COMM_WORLD);
+        MPI_Send(&subcube[0], 1, YZLayerDataType, LEFT_NEIGHBOUR, LEFT_LAYER_TAG, MPI_COMM_WORLD);
     }
 
     // Send Right Layer
     if (RIGHT_NEIGHBOUR != -1) {
-        MPI_Send(&subcube[pointsPerSubEdge * pointsPerSubEdge - pointsPerSubEdge], pointsPerSubEdge * pointsPerSubEdge, YZLayerDataType, RIGHT_NEIGHBOUR, RIGHT_LAYER_TAG, MPI_COMM_WORLD);
+        MPI_Send(&subcube[pointsPerSubEdge * pointsPerSubEdge - pointsPerSubEdge], 1, YZLayerDataType, RIGHT_NEIGHBOUR, RIGHT_LAYER_TAG, MPI_COMM_WORLD);
     }
-
+ 
     // Receive --------------------------------------------------------------------------------
 
     MPI_Status downBufferStatus;
@@ -351,7 +367,7 @@ int main(int argc, char* argv[]) {
         cout << endl;
 
         // Test Purposes
-        fillByEnumerating(subcube, pointsPerSubEdge);
+  
     
     }
 
@@ -396,6 +412,10 @@ int main(int argc, char* argv[]) {
     //print(ghostCube, pointsPerGhostEdge);
 
     // Finalize -------------------------------------------------------------------------------------------
+
+    MPI_Type_free(&XYLayerDataType);
+    MPI_Type_free(&XZLayerDataType);
+    MPI_Type_free(&YZLayerDataType);
 
     MPI_Finalize();
 
