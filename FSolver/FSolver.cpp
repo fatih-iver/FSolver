@@ -40,7 +40,6 @@ void fillByEnumerating(double* cube, int pointsPerEdge, int offset) {
     }
 }
 
-
 void print(double* cube, int pointsPerEdge) {
     for (int i = 0; i < pointsPerEdge; i++) {
         for (int j = 0; j < pointsPerEdge; j++) {
@@ -100,12 +99,53 @@ void fillBufferWithZeros(double* buffer, int bufferSize) {
     }
 }
 
+void calculateCurrentOffset(Offset& myOffset, int i, int j, int k, Offset& currentOffset) {
+    currentOffset.I = myOffset.I + i;
+    currentOffset.J = myOffset.J + j;
+    currentOffset.K = myOffset.K + k;
+
+}
+
+bool isBoundryPoint(Offset& offset, int pointsPerEdge) {
+
+    int minIndex = 0;
+    int maxIndex = pointsPerEdge - 1;
+    
+    if (offset.I == minIndex || offset.I == maxIndex) {
+        return true;
+    }
+
+    if (offset.J == minIndex || offset.J == maxIndex) {
+        return true;
+    }
+
+    if (offset.K == minIndex || offset.K == maxIndex) {
+        return true;
+    }
+
+    return false;
+}
+
 double u(double x, double y, double z) {
     return x * y * z;
 }
 
+double un(int n, int i, int j, int k) {
+    double x = (1.0 * i) / n;
+    double y = (1.0 * j) / n;
+    double z = (1.0 * k) / n;
+    return u(x, y, z);
+}
+
 double f(double x, double y, double z) {
     return 1.0 + 1.0 + 1.0;
+}
+
+double fn(int n, int i, int j, int k) {
+    double x = (1.0 * i) / n;
+    double y = (1.0 * j) / n;
+    double z = (1.0 * k )/ n;
+    return f(x, y, z);
 }
 
 int main(int argc, char* argv[]) {
@@ -142,7 +182,7 @@ int main(int argc, char* argv[]) {
 
     int pointsPerGhostEdge = 1 + pointsPerSubEdge + 1;
 
-    // Subcube - Initialization -------------------------------------------------------------
+    // Initialize Subcube -------------------------------------------------------------
 
     double *subcube = new double[pointsPerSubEdge * pointsPerSubEdge * pointsPerSubEdge];
 
@@ -152,7 +192,7 @@ int main(int argc, char* argv[]) {
 
     fillWithZeros(ghostCube, pointsPerGhostEdge);
 
-    // Offsets -------------------------------------------------------------------------------------
+    // Calculate Offsets -------------------------------------------------------------------------------------
 
     struct Offset myOffset;
 
@@ -162,7 +202,7 @@ int main(int argc, char* argv[]) {
 
     Offset myNormalizedOffset = {myOffset.I / pointsPerSubEdge, myOffset.J / pointsPerSubEdge, myOffset.K / pointsPerSubEdge };
 
-    // Neighbours -----------------------------------------------------------------------------------
+    // Create Neighbours Cube -----------------------------------------------------------------------------------
 
     int*** neighbours  = new int** [subcubePerEdge];
 
@@ -229,37 +269,35 @@ int main(int argc, char* argv[]) {
 
     double* upBuffer = new double[bufferSize];
     fillBufferWithZeros(upBuffer, bufferSize);
+
     double* downBuffer = new double[bufferSize];
     fillBufferWithZeros(downBuffer, bufferSize);
+
     double* frontBuffer = new double[bufferSize];
     fillBufferWithZeros(frontBuffer, bufferSize);
+
     double* backBuffer = new double[bufferSize];
     fillBufferWithZeros(backBuffer, bufferSize);
+
     double* leftBuffer = new double[bufferSize];
     fillBufferWithZeros(leftBuffer, bufferSize);
+
     double* rightBuffer = new double[bufferSize];
     fillBufferWithZeros(rightBuffer, bufferSize);
-
 
     // Layer Calculations ----------------------------------------------------------------------------------
 
     MPI_Datatype XZLayerDataType; // For Up & Down
-
-    // MPI_Type_vector (count,blocklength,stride,oldtype,&newtype)
     MPI_Type_vector(1, pointsPerSubEdge * pointsPerSubEdge, 0, MPI_DOUBLE, &XZLayerDataType);
-    MPI_Type_commit(&XZLayerDataType);
+    MPI_Type_commit(&XZLayerDataType); // MPI_Type_vector (count,blocklength,stride,oldtype,&newtype)
 
     MPI_Datatype XYLayerDataType; // For Front & Back
-
-    // MPI_Type_vector (count,blocklength,stride,oldtype,&newtype)
     MPI_Type_vector(pointsPerSubEdge * pointsPerSubEdge, 1, pointsPerSubEdge, MPI_DOUBLE, &XYLayerDataType);
-    MPI_Type_commit(&XYLayerDataType);
+    MPI_Type_commit(&XYLayerDataType); // MPI_Type_vector (count,blocklength,stride,oldtype,&newtype)
 
     MPI_Datatype YZLayerDataType; // For Left & Right
-
-    // MPI_Type_vector (count,blocklength,stride,oldtype,&newtype)
     MPI_Type_vector(pointsPerSubEdge, pointsPerSubEdge, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, &YZLayerDataType);
-    MPI_Type_commit(&YZLayerDataType);
+    MPI_Type_commit(&YZLayerDataType); // MPI_Type_vector (count,blocklength,stride,oldtype,&newtype)
 
     // Tag Constants --------------------------------------------------------------------------------------
 
@@ -270,11 +308,25 @@ int main(int argc, char* argv[]) {
     const int LEFT_LAYER_TAG = 5;
     const int RIGHT_LAYER_TAG = 6;
 
+    // Calculate Boundary Points
+
+    Offset currentOffset;
+
+    for (int i = 0; i < pointsPerSubEdge; i++) {
+        for (int j = 0; j < pointsPerSubEdge; j++) {
+            for (int k = 0; k < pointsPerSubEdge; k++) {
+                calculateCurrentOffset(myOffset, i, j, k, currentOffset);
+                if (!isBoundryPoint(currentOffset, pointsPerEdge)) {
+                     subcube[calculateFlatIndex(pointsPerSubEdge, i, j, k)] = un(n, currentOffset.I, currentOffset.J, currentOffset.K);
+                }
+            }
+        }
+    }
+
     // Send --------------------------------------------------------------------------------
 
-    fillByEnumerating(subcube, pointsPerSubEdge, myRank * pointsPerSubEdge * pointsPerSubEdge * pointsPerSubEdge);
+    // Test Purposes Only: fillByEnumerating(subcube, pointsPerSubEdge, myRank * pointsPerSubEdge * pointsPerSubEdge * pointsPerSubEdge);
     
-
     // Send Up Layer
     if (UP_NEIGHBOUR != -1) {
         MPI_Send(&subcube[0], 1, XZLayerDataType, UP_NEIGHBOUR, UP_LAYER_TAG, MPI_COMM_WORLD);
