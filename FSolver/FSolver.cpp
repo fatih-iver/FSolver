@@ -29,6 +29,18 @@ void fillWithZeros(double* cube, int pointsPerEdge) {
     }
 }
 
+void fillByEnumerating(double* cube, int pointsPerEdge) {
+    for (int i = 0; i < pointsPerEdge; i++) {
+        for (int j = 0; j < pointsPerEdge; j++) {
+            for (int k = 0; k < pointsPerEdge; k++) {
+                int flatIndex = calculateFlatIndex(pointsPerEdge, i, j, k);
+                cube[flatIndex] = flatIndex;
+            }
+        }
+    }
+}
+
+
 void print(double* cube, int pointsPerEdge) {
     for (int i = 0; i < pointsPerEdge; i++) {
         for (int j = 0; j < pointsPerEdge; j++) {
@@ -75,12 +87,19 @@ void calculateMyOffset(int myRank, int cubeDimension, int subcubeDimension, Offs
 
 }
 
+void printBuffer(double* buffer, int bufferSize) {
+    for (int i = 0; i < bufferSize; i++) {
+        cout << buffer[i] << " ";
+    }
+    cout << endl;
+}
+
 double u(double x, double y, double z) {
     return x * y * z;
 }
 
 double f(double x, double y, double z) {
-    return 1 + 1 + 1;
+    return 1.0 + 1.0 + 1.0;
 }
 
 int main(int argc, char* argv[]) {
@@ -127,8 +146,6 @@ int main(int argc, char* argv[]) {
 
     fillWithZeros(ghostCube, pointsPerGhostEdge);
 
-    
-
     // Offsets -------------------------------------------------------------------------------------
 
     struct Offset myOffset;
@@ -154,7 +171,7 @@ int main(int argc, char* argv[]) {
         }
 
     }
-
+      
     for (int i = 0; i < subcubePerEdge; i++) {
         for (int j = 0; j < subcubePerEdge; j++) {
             for (int k = 0; k < subcubePerEdge; k++) {
@@ -167,37 +184,153 @@ int main(int argc, char* argv[]) {
 
     int ME = myRank;
 
-    int UP = -1;
-    int DOWN = -1;
+    int UP_NEIGHBOUR = -1;
+    int DOWN_NEIGHBOUR = -1;
     
-    int LEFT = -1;
-    int RIGHT = -1;
+    int LEFT_NEIGHBOUR = -1;
+    int RIGHT_NEIGHBOUR = -1;
 
-    int FRONT = - 1;
-    int BACK = -1;
+    int FRONT_NEIGHBOUR = - 1;
+    int BACK_NEIGHBOUR = -1;
 
     if (myNormalizedOffset.I - 1 >= 0) {
-        UP = neighbours[myNormalizedOffset.I - 1][myNormalizedOffset.J][myNormalizedOffset.K];
+        UP_NEIGHBOUR = neighbours[myNormalizedOffset.I - 1][myNormalizedOffset.J][myNormalizedOffset.K];
     }
 
     if (myNormalizedOffset.I + 1 < subcubePerEdge) {
-        DOWN = neighbours[myNormalizedOffset.I + 1][myNormalizedOffset.J][myNormalizedOffset.K];
+        DOWN_NEIGHBOUR = neighbours[myNormalizedOffset.I + 1][myNormalizedOffset.J][myNormalizedOffset.K];
     }
 
     if (myNormalizedOffset.J - 1 >= 0) {
-        LEFT = neighbours[myNormalizedOffset.I][myNormalizedOffset.J - 1][myNormalizedOffset.K];
+        LEFT_NEIGHBOUR = neighbours[myNormalizedOffset.I][myNormalizedOffset.J - 1][myNormalizedOffset.K];
     }
 
     if (myNormalizedOffset.J + 1 < subcubePerEdge) {
-        RIGHT = neighbours[myNormalizedOffset.I][myNormalizedOffset.J + 1][myNormalizedOffset.K];
+        RIGHT_NEIGHBOUR = neighbours[myNormalizedOffset.I][myNormalizedOffset.J + 1][myNormalizedOffset.K];
     }
 
     if (myNormalizedOffset.K - 1 >= 0) {
-        BACK = neighbours[myNormalizedOffset.I][myNormalizedOffset.J][myNormalizedOffset.K - 1];
+        BACK_NEIGHBOUR = neighbours[myNormalizedOffset.I][myNormalizedOffset.J][myNormalizedOffset.K - 1];
     }
 
     if (myNormalizedOffset.K + 1 < subcubePerEdge) {
-        FRONT = neighbours[myNormalizedOffset.I][myNormalizedOffset.J][myNormalizedOffset.K + 1];
+        FRONT_NEIGHBOUR = neighbours[myNormalizedOffset.I][myNormalizedOffset.J][myNormalizedOffset.K + 1];
+    }
+
+    // Buffers --------------------------------------------------------------------------------------------
+
+    int bufferSize = pointsPerSubEdge * pointsPerSubEdge;
+
+    double* upBuffer = new double[bufferSize];
+    double* downBuffer = new double[bufferSize];
+    double* frontBuffer = new double[bufferSize];
+    double* backBuffer = new double[bufferSize];
+    double* leftBuffer = new double[bufferSize];
+    double* rightBuffer = new double[bufferSize];
+
+    // Layer Calculations ----------------------------------------------------------------------------------
+
+    MPI_Datatype XZLayerDataType; // For Up & Down
+
+    // MPI_Type_vector (count,blocklength,stride,oldtype,&newtype)
+    MPI_Type_vector(1, pointsPerSubEdge * pointsPerSubEdge, 0, MPI_DOUBLE, &XZLayerDataType);
+    MPI_Type_commit(&XZLayerDataType);
+
+    MPI_Datatype XYLayerDataType; // For Front & Back
+
+    // MPI_Type_vector (count,blocklength,stride,oldtype,&newtype)
+    MPI_Type_vector(pointsPerSubEdge * pointsPerSubEdge, 1, pointsPerSubEdge, MPI_DOUBLE, &XYLayerDataType);
+    MPI_Type_commit(&XYLayerDataType);
+
+    MPI_Datatype YZLayerDataType; // For Left & Right
+
+    // MPI_Type_vector (count,blocklength,stride,oldtype,&newtype)
+    MPI_Type_vector(pointsPerSubEdge, pointsPerSubEdge, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, &YZLayerDataType);
+    MPI_Type_commit(&YZLayerDataType);
+
+    // Tag Constants --------------------------------------------------------------------------------------
+
+    const int UP_LAYER_TAG = 1;
+    const int DOWN_LAYER_TAG = 2;
+    const int FRONT_LAYER_TAG = 3;
+    const int BACK_LAYER_TAG = 4;
+    const int LEFT_LAYER_TAG = 5;
+    const int RIGHT_LAYER_TAG = 6;
+
+    // Send --------------------------------------------------------------------------------
+
+    // Send Up Layer
+    if (UP_NEIGHBOUR != -1) {
+        MPI_Send(&subcube[0], pointsPerSubEdge * pointsPerSubEdge, XZLayerDataType, UP_NEIGHBOUR, UP_LAYER_TAG, MPI_COMM_WORLD);
+    }
+
+    // Send Down Layer
+    if (DOWN_NEIGHBOUR != -1) {
+        MPI_Send(&subcube[pointsPerSubEdge * pointsPerSubEdge * (pointsPerSubEdge - 1)], pointsPerSubEdge * pointsPerSubEdge, XZLayerDataType, DOWN_NEIGHBOUR, DOWN_LAYER_TAG, MPI_COMM_WORLD);
+    }
+
+    // Send Front Layer
+    if (FRONT_NEIGHBOUR != -1) {
+        MPI_Send(&subcube[pointsPerEdge - 1], pointsPerSubEdge * pointsPerSubEdge, XYLayerDataType, FRONT_NEIGHBOUR, FRONT_LAYER_TAG, MPI_COMM_WORLD);
+    }
+
+    // Send Back Layer
+    if (BACK_NEIGHBOUR != -1) {
+        MPI_Send(&subcube[0], pointsPerSubEdge * pointsPerSubEdge, XYLayerDataType, BACK_NEIGHBOUR, BACK_LAYER_TAG, MPI_COMM_WORLD);
+    }
+
+    // Send Left Layer
+    if (LEFT_NEIGHBOUR != -1) {
+        MPI_Send(&subcube[0], pointsPerSubEdge * pointsPerSubEdge, YZLayerDataType, LEFT_NEIGHBOUR, LEFT_LAYER_TAG, MPI_COMM_WORLD);
+    }
+
+    // Send Right Layer
+    if (RIGHT_NEIGHBOUR != -1) {
+        MPI_Send(&subcube[pointsPerSubEdge * pointsPerSubEdge - pointsPerSubEdge], pointsPerSubEdge * pointsPerSubEdge, YZLayerDataType, RIGHT_NEIGHBOUR, RIGHT_LAYER_TAG, MPI_COMM_WORLD);
+    }
+
+    // Receive --------------------------------------------------------------------------------
+
+    MPI_Status downBufferStatus;
+
+    // Receive Down Layer
+    if (DOWN_NEIGHBOUR != -1) {
+        MPI_Recv(downBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, DOWN_NEIGHBOUR, UP_LAYER_TAG, MPI_COMM_WORLD, &downBufferStatus);
+    }
+
+    MPI_Status upBufferStatus;
+
+    // Receive Up Layer
+    if (UP_NEIGHBOUR != -1) {
+        MPI_Recv(upBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, UP_NEIGHBOUR, DOWN_LAYER_TAG, MPI_COMM_WORLD, &upBufferStatus);
+    }
+
+    MPI_Status frontBufferStatus;
+
+    // Receive Front Layer
+    if (FRONT_NEIGHBOUR != -1) {
+        MPI_Recv(frontBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, FRONT_NEIGHBOUR, BACK_LAYER_TAG, MPI_COMM_WORLD, &frontBufferStatus);
+    }
+
+    MPI_Status backBufferStatus;
+
+    // Receive Back Layer
+    if (BACK_NEIGHBOUR != -1) {
+        MPI_Recv(backBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, BACK_NEIGHBOUR, FRONT_LAYER_TAG, MPI_COMM_WORLD, &backBufferStatus);
+    }
+
+    MPI_Status leftBufferStatus;
+
+    // Receive Left Layer
+    if (LEFT_NEIGHBOUR != -1) {
+        MPI_Recv(leftBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, LEFT_NEIGHBOUR, RIGHT_LAYER_TAG, MPI_COMM_WORLD, &leftBufferStatus);
+    }
+
+    MPI_Status rightBufferStatus;
+
+    // Receive Left Layer
+    if (RIGHT_NEIGHBOUR != -1) {
+        MPI_Recv(rightBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, RIGHT_NEIGHBOUR, LEFT_LAYER_TAG, MPI_COMM_WORLD, &rightBufferStatus);
     }
     
     // DEBUG INFO -------------------------------------------------------------------------------------------
@@ -216,6 +349,9 @@ int main(int argc, char* argv[]) {
         cout << "Points per Sub Edge: " << pointsPerSubEdge << endl;
         cout << "Points per Ghost Edge: " << pointsPerGhostEdge << endl;
         cout << endl;
+
+        // Test Purposes
+        fillByEnumerating(subcube, pointsPerSubEdge);
     
     }
 
@@ -227,7 +363,31 @@ int main(int argc, char* argv[]) {
 
     cout << "My Normalized Offset: " << myNormalizedOffset.I << " " << myNormalizedOffset.J << " " << myNormalizedOffset.K << endl;
 
-    cout << "Neighbours:" << " U " << UP << " D " << DOWN << " L " << LEFT << " R " << RIGHT << " F " << FRONT << " B " << BACK << endl;
+    cout << "Neighbours:" << " U " << UP_NEIGHBOUR << " D " << DOWN_NEIGHBOUR << " L " << LEFT_NEIGHBOUR << " R " << RIGHT_NEIGHBOUR << " F " << FRONT_NEIGHBOUR << " B " << BACK_NEIGHBOUR << endl;
+
+    cout << "Up Buffer: " << endl;
+
+    printBuffer(upBuffer, bufferSize);
+
+    cout << "Down Buffer: " << endl;
+
+    printBuffer(downBuffer, bufferSize);
+
+    cout << "Front Buffer: " << endl;
+
+    printBuffer(frontBuffer, bufferSize);
+
+    cout << "Back Buffer: " << endl;
+
+    printBuffer(backBuffer, bufferSize);
+
+    cout << "Left Buffer: " << endl;
+
+    printBuffer(leftBuffer, bufferSize);
+
+    cout << "Right Buffer: " << endl;
+
+    printBuffer(rightBuffer, bufferSize);
 
     cout << endl;
 
