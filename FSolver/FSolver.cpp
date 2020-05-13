@@ -188,9 +188,9 @@ int main(int argc, char* argv[]) {
 
     fillWithZeros(subcube, pointsPerSubEdge);
 
-    double* ghostCube = new double[pointsPerGhostEdge * pointsPerGhostEdge * pointsPerGhostEdge];
+    //double* ghostCube = new double[pointsPerGhostEdge * pointsPerGhostEdge * pointsPerGhostEdge];
 
-    fillWithZeros(ghostCube, pointsPerGhostEdge);
+    //fillWithZeros(ghostCube, pointsPerGhostEdge);
 
     // Calculate Offsets -------------------------------------------------------------------------------------
 
@@ -201,6 +201,8 @@ int main(int argc, char* argv[]) {
     int offsetFlatIndex = calculateFlatOffset(pointsPerEdge, myOffset);
 
     Offset myNormalizedOffset = {myOffset.I / pointsPerSubEdge, myOffset.J / pointsPerSubEdge, myOffset.K / pointsPerSubEdge };
+
+    Offset currentOffset;
 
     // Create Neighbours Cube -----------------------------------------------------------------------------------
 
@@ -308,9 +310,20 @@ int main(int argc, char* argv[]) {
     const int LEFT_LAYER_TAG = 5;
     const int RIGHT_LAYER_TAG = 6;
 
-    // Calculate Boundary Points
+    // Craete & Fill Real Subcube
 
-    Offset currentOffset;
+    double* realSubcube = new double[pointsPerSubEdge * pointsPerSubEdge * pointsPerSubEdge];
+
+    for (int i = 0; i < pointsPerSubEdge; i++) {
+        for (int j = 0; j < pointsPerSubEdge; j++) {
+            for (int k = 0; k < pointsPerSubEdge; k++) {
+                calculateCurrentOffset(myOffset, i, j, k, currentOffset);
+                realSubcube[calculateFlatIndex(pointsPerSubEdge, i, j, k)] = un(n, currentOffset.I, currentOffset.J, currentOffset.K);
+            }
+        }
+    }
+
+    // Calculate Boundary Points
 
     for (int i = 0; i < pointsPerSubEdge; i++) {
         for (int j = 0; j < pointsPerSubEdge; j++) {
@@ -459,7 +472,13 @@ int main(int argc, char* argv[]) {
 
     cout << endl;
 
+    cout << "Subcube:" << endl;
+
     print(subcube, pointsPerSubEdge);
+
+    cout << "Real Subcube:" << endl;
+
+    print(realSubcube, pointsPerSubEdge);
 
     //print(ghostCube, pointsPerGhostEdge);
 
