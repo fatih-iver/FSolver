@@ -339,6 +339,38 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // Send & Receive Status -------------------------------------------------------------------------------
+
+    MPI_Status upLayerSendStatus;
+    MPI_Status downLayerSendStatus;
+    MPI_Status frontLayerSendStatus;
+    MPI_Status backLayerSendStatus;
+    MPI_Status leftLayerSendStatus;
+    MPI_Status rightLayerSendStatus;
+
+    MPI_Status upLayerReceiveStatus;
+    MPI_Status downLayerReceiveStatus;
+    MPI_Status frontLayerReceiveStatus;
+    MPI_Status backLayerReceiveStatus;
+    MPI_Status leftLayerReceiveStatus;
+    MPI_Status rightLayerReceiveStatus;
+
+    // Send & Recieve Requests -----------------------------------------------------------------------------------------
+
+    MPI_Request upLayerSendRequest;
+    MPI_Request downLayerSendRequest;
+    MPI_Request frontLayerSendRequest;
+    MPI_Request backLayerSendRequest;
+    MPI_Request leftLayerSendRequest;
+    MPI_Request rightLayerSendRequest;
+   
+    MPI_Request upLayerReceiveRequest;
+    MPI_Request downLayerReceiveRequest;
+    MPI_Request frontLayerReceiveRequest;
+    MPI_Request backLayerReceiveRequest;
+    MPI_Request leftLayerReceiveRequest;
+    MPI_Request rightLayerReceiveRequest;
+
     // Main Logic ----------------------------------------------------------------------------------------------------
 
     double error = 0;
@@ -357,76 +389,64 @@ int main(int argc, char* argv[]) {
     
         // Send Up Layer
         if (UP_NEIGHBOUR != -1) {
-            MPI_Send(&subcube[0], 1, XZLayerDataType, UP_NEIGHBOUR, UP_LAYER_TAG, MPI_COMM_WORLD);
+            MPI_Isend(&subcube[0], 1, XZLayerDataType, UP_NEIGHBOUR, UP_LAYER_TAG, MPI_COMM_WORLD, &upLayerSendRequest);
         }
 
         // Send Down Layer
         if (DOWN_NEIGHBOUR != -1) {
-            MPI_Send(&subcube[pointsPerSubEdge * pointsPerSubEdge * (pointsPerSubEdge - 1)], 1, XZLayerDataType, DOWN_NEIGHBOUR, DOWN_LAYER_TAG, MPI_COMM_WORLD);
+            MPI_Isend(&subcube[pointsPerSubEdge * pointsPerSubEdge * (pointsPerSubEdge - 1)], 1, XZLayerDataType, DOWN_NEIGHBOUR, DOWN_LAYER_TAG, MPI_COMM_WORLD, &downLayerSendRequest);
         }
 
         // Send Front Layer
         if (FRONT_NEIGHBOUR != -1) {
-            MPI_Send(&subcube[pointsPerSubEdge - 1], 1, XYLayerDataType, FRONT_NEIGHBOUR, FRONT_LAYER_TAG, MPI_COMM_WORLD);
+            MPI_Isend(&subcube[pointsPerSubEdge - 1], 1, XYLayerDataType, FRONT_NEIGHBOUR, FRONT_LAYER_TAG, MPI_COMM_WORLD, &frontLayerSendRequest);
         }
 
         // Send Back Layer
         if (BACK_NEIGHBOUR != -1) {
-            MPI_Send(&subcube[0], 1, XYLayerDataType, BACK_NEIGHBOUR, BACK_LAYER_TAG, MPI_COMM_WORLD);
+            MPI_Isend(&subcube[0], 1, XYLayerDataType, BACK_NEIGHBOUR, BACK_LAYER_TAG, MPI_COMM_WORLD, &backLayerSendRequest);
         }
 
         // Send Left Layer
         if (LEFT_NEIGHBOUR != -1) {
-            MPI_Send(&subcube[0], 1, YZLayerDataType, LEFT_NEIGHBOUR, LEFT_LAYER_TAG, MPI_COMM_WORLD);
+            MPI_Isend(&subcube[0], 1, YZLayerDataType, LEFT_NEIGHBOUR, LEFT_LAYER_TAG, MPI_COMM_WORLD, &leftLayerSendRequest);
         }
 
         // Send Right Layer
         if (RIGHT_NEIGHBOUR != -1) {
-            MPI_Send(&subcube[pointsPerSubEdge * pointsPerSubEdge - pointsPerSubEdge], 1, YZLayerDataType, RIGHT_NEIGHBOUR, RIGHT_LAYER_TAG, MPI_COMM_WORLD);
+            MPI_Isend(&subcube[pointsPerSubEdge * pointsPerSubEdge - pointsPerSubEdge], 1, YZLayerDataType, RIGHT_NEIGHBOUR, RIGHT_LAYER_TAG, MPI_COMM_WORLD, &rightLayerSendRequest);
         }
 
         // Receive Layers -----------------------------------------------------------------------------------------------
 
-        MPI_Status downBufferStatus;
-
         // Receive Down Layer
         if (DOWN_NEIGHBOUR != -1) {
-            MPI_Recv(downBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, DOWN_NEIGHBOUR, UP_LAYER_TAG, MPI_COMM_WORLD, &downBufferStatus);
+            MPI_Irecv(downBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, DOWN_NEIGHBOUR, UP_LAYER_TAG, MPI_COMM_WORLD, &downLayerReceiveRequest);
         }
-
-        MPI_Status upBufferStatus;
 
         // Receive Up Layer
         if (UP_NEIGHBOUR != -1) {
-            MPI_Recv(upBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, UP_NEIGHBOUR, DOWN_LAYER_TAG, MPI_COMM_WORLD, &upBufferStatus);
+            MPI_Irecv(upBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, UP_NEIGHBOUR, DOWN_LAYER_TAG, MPI_COMM_WORLD, &upLayerReceiveRequest);
         }
-
-        MPI_Status frontBufferStatus;
 
         // Receive Front Layer
         if (FRONT_NEIGHBOUR != -1) {
-            MPI_Recv(frontBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, FRONT_NEIGHBOUR, BACK_LAYER_TAG, MPI_COMM_WORLD, &frontBufferStatus);
+            MPI_Irecv(frontBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, FRONT_NEIGHBOUR, BACK_LAYER_TAG, MPI_COMM_WORLD, &frontLayerReceiveRequest);
         }
-
-        MPI_Status backBufferStatus;
 
         // Receive Back Layer
         if (BACK_NEIGHBOUR != -1) {
-            MPI_Recv(backBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, BACK_NEIGHBOUR, FRONT_LAYER_TAG, MPI_COMM_WORLD, &backBufferStatus);
+            MPI_Irecv(backBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, BACK_NEIGHBOUR, FRONT_LAYER_TAG, MPI_COMM_WORLD, &backLayerReceiveRequest);
         }
-
-        MPI_Status leftBufferStatus;
 
         // Receive Left Layer
         if (LEFT_NEIGHBOUR != -1) {
-            MPI_Recv(leftBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, LEFT_NEIGHBOUR, RIGHT_LAYER_TAG, MPI_COMM_WORLD, &leftBufferStatus);
+            MPI_Irecv(leftBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, LEFT_NEIGHBOUR, RIGHT_LAYER_TAG, MPI_COMM_WORLD, &leftLayerReceiveRequest);
         }
-
-        MPI_Status rightBufferStatus;
 
         // Receive Left Layer
         if (RIGHT_NEIGHBOUR != -1) {
-            MPI_Recv(rightBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, RIGHT_NEIGHBOUR, LEFT_LAYER_TAG, MPI_COMM_WORLD, &rightBufferStatus);
+            MPI_Irecv(rightBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, RIGHT_NEIGHBOUR, LEFT_LAYER_TAG, MPI_COMM_WORLD, &rightLayerReceiveRequest);
         }
 
         // Do Jacobi Iteration -------------------------------------------------------------------------------------
@@ -443,6 +463,7 @@ int main(int argc, char* argv[]) {
                         double result = 0;
 
                         if (i == minIndex) {
+                            MPI_Wait(&upLayerReceiveRequest, &upLayerReceiveStatus);
                             result += upBuffer[calculateBufferIndex(pointsPerSubEdge, j, k)];
                         } 
                         else {
@@ -450,6 +471,7 @@ int main(int argc, char* argv[]) {
                         }
 
                         if (i == maxIndex) {
+                            MPI_Wait(&downLayerReceiveRequest, &downLayerReceiveStatus);
                             result += downBuffer[calculateBufferIndex(pointsPerSubEdge, j, k)];
                         }
                         else {
@@ -457,6 +479,7 @@ int main(int argc, char* argv[]) {
                         }
 
                         if (j == minIndex) {
+                            MPI_Wait(&leftLayerReceiveRequest, &leftLayerReceiveStatus);
                             result += leftBuffer[calculateBufferIndex(pointsPerSubEdge, i, k)];
                         }
                         else {
@@ -464,6 +487,7 @@ int main(int argc, char* argv[]) {
                         }
 
                         if (j == maxIndex) {
+                            MPI_Wait(&rightLayerReceiveRequest, &rightLayerReceiveStatus);
                             result += rightBuffer[calculateBufferIndex(pointsPerSubEdge, i, k)];
                         }
                         else {
@@ -471,6 +495,7 @@ int main(int argc, char* argv[]) {
                         }
 
                         if (k == minIndex) {
+                            MPI_Wait(&backLayerReceiveRequest, &backLayerReceiveStatus);
                             result += backBuffer[calculateBufferIndex(pointsPerSubEdge, i, j)];
                         }
                         else {
@@ -478,6 +503,7 @@ int main(int argc, char* argv[]) {
                         }
 
                         if (k == maxIndex) {
+                            MPI_Wait(&frontLayerReceiveRequest, &frontLayerReceiveStatus);
                             result += frontBuffer[calculateBufferIndex(pointsPerSubEdge, i, j)];
                         }
                         else {
@@ -508,7 +534,7 @@ int main(int argc, char* argv[]) {
 
         // Synchronize  -------------------------------------------------------------------------------------
 
-        MPI_Barrier(MPI_COMM_WORLD);
+        //MPI_Barrier(MPI_COMM_WORLD);
 
         // Gather Suberros -------------------------------------------------------------------------------------
 
