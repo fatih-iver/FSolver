@@ -4,6 +4,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <cmath>
 
 using namespace std;
 
@@ -164,12 +165,14 @@ int main(int argc, char* argv[]) {
 
     // Points per Edge Calculations -------------------------------------------------------------------------------------
 
-    double subcubePerEdge = cbrt(numberOfTasks);
+    double _subcubePerEdge = cbrt(numberOfTasks);
 
-    if (!isWholeNumber(subcubePerEdge)) {
+    if (!isWholeNumber(_subcubePerEdge)) {
         cout << "cube root of number of tasks is not a whole number!" << endl;
         return 0;
     }
+
+    int subcubePerEdge = _subcubePerEdge;
 
     int n = stoi(argv[1]);
 
@@ -192,10 +195,6 @@ int main(int argc, char* argv[]) {
 
     fillWithZeros(subcube, pointsPerSubEdge);
 
-    //double* ghostCube = new double[pointsPerGhostEdge * pointsPerGhostEdge * pointsPerGhostEdge];
-
-    //fillWithZeros(ghostCube, pointsPerGhostEdge);
-
     // Calculate Offsets -------------------------------------------------------------------------------------
 
     struct Offset myOffset;
@@ -210,11 +209,11 @@ int main(int argc, char* argv[]) {
 
     // Create Neighbours Cube -----------------------------------------------------------------------------------
 
-    int*** neighbours  = new int** [subcubePerEdge];
+    int*** neighbours  = new int**[subcubePerEdge];
 
     for (int i = 0; i < subcubePerEdge; i++) {
         
-        neighbours[i] = new int* [subcubePerEdge];
+        neighbours[i] = new int*[subcubePerEdge];
 
         for (int j = 0; j < subcubePerEdge; j++) {
            
@@ -340,102 +339,15 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Send --------------------------------------------------------------------------------
-
-    // Test Purposes Only: fillByEnumerating(subcube, pointsPerSubEdge, myRank * pointsPerSubEdge * pointsPerSubEdge * pointsPerSubEdge);
-    
-    /*
-
-    // Send Up Layer
-    if (UP_NEIGHBOUR != -1) {
-        MPI_Send(&subcube[0], 1, XZLayerDataType, UP_NEIGHBOUR, UP_LAYER_TAG, MPI_COMM_WORLD);
-    }
-
-    // Send Down Layer
-    if (DOWN_NEIGHBOUR != -1) {
-        MPI_Send(&subcube[pointsPerSubEdge * pointsPerSubEdge * (pointsPerSubEdge - 1)], 1, XZLayerDataType, DOWN_NEIGHBOUR, DOWN_LAYER_TAG, MPI_COMM_WORLD);
-    }
-
-    // Send Front Layer
-    if (FRONT_NEIGHBOUR != -1) {
-        MPI_Send(&subcube[pointsPerSubEdge - 1], 1, XYLayerDataType, FRONT_NEIGHBOUR, FRONT_LAYER_TAG, MPI_COMM_WORLD);
-    }
-
-    // Send Back Layer
-    if (BACK_NEIGHBOUR != -1) {
-        MPI_Send(&subcube[0], 1, XYLayerDataType, BACK_NEIGHBOUR, BACK_LAYER_TAG, MPI_COMM_WORLD);
-    }
-
-    // Send Left Layer
-    if (LEFT_NEIGHBOUR != -1) {
-        MPI_Send(&subcube[0], 1, YZLayerDataType, LEFT_NEIGHBOUR, LEFT_LAYER_TAG, MPI_COMM_WORLD);
-    }
-
-    // Send Right Layer
-    if (RIGHT_NEIGHBOUR != -1) {
-        MPI_Send(&subcube[pointsPerSubEdge * pointsPerSubEdge - pointsPerSubEdge], 1, YZLayerDataType, RIGHT_NEIGHBOUR, RIGHT_LAYER_TAG, MPI_COMM_WORLD);
-    }
-
-    */
- 
-    // Receive --------------------------------------------------------------------------------
-
-
-    /*
-
-    MPI_Status downBufferStatus;
-
-    // Receive Down Layer
-    if (DOWN_NEIGHBOUR != -1) {
-        MPI_Recv(downBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, DOWN_NEIGHBOUR, UP_LAYER_TAG, MPI_COMM_WORLD, &downBufferStatus);
-    }
-
-    MPI_Status upBufferStatus;
-
-    // Receive Up Layer
-    if (UP_NEIGHBOUR != -1) {
-        MPI_Recv(upBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, UP_NEIGHBOUR, DOWN_LAYER_TAG, MPI_COMM_WORLD, &upBufferStatus);
-    }
-
-    MPI_Status frontBufferStatus;
-
-    // Receive Front Layer
-    if (FRONT_NEIGHBOUR != -1) {
-        MPI_Recv(frontBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, FRONT_NEIGHBOUR, BACK_LAYER_TAG, MPI_COMM_WORLD, &frontBufferStatus);
-    }
-
-    MPI_Status backBufferStatus;
-
-    // Receive Back Layer
-    if (BACK_NEIGHBOUR != -1) {
-        MPI_Recv(backBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, BACK_NEIGHBOUR, FRONT_LAYER_TAG, MPI_COMM_WORLD, &backBufferStatus);
-    }
-
-    MPI_Status leftBufferStatus;
-
-    // Receive Left Layer
-    if (LEFT_NEIGHBOUR != -1) {
-        MPI_Recv(leftBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, LEFT_NEIGHBOUR, RIGHT_LAYER_TAG, MPI_COMM_WORLD, &leftBufferStatus);
-    }
-
-    MPI_Status rightBufferStatus;
-
-    // Receive Left Layer
-    if (RIGHT_NEIGHBOUR != -1) {
-        MPI_Recv(rightBuffer, pointsPerSubEdge * pointsPerSubEdge, MPI_DOUBLE, RIGHT_NEIGHBOUR, LEFT_LAYER_TAG, MPI_COMM_WORLD, &rightBufferStatus);
-    }
-
-    */
-
     // Main Logic ----------------------------------------------------------------------------------------------------
 
     double error = 0;
 
-    const double errorThreshold = pow(n, -4);
+    const double errorThreshold = pow(10, -3);
     
     int iterationCount = 0;
 
-    const int iterationThreshold = 1000;
+    //const int iterationThreshold = 1000;
 
     while (true) {
 
@@ -604,7 +516,7 @@ int main(int argc, char* argv[]) {
 
         // Loop Control -------------------------------------------------------------------------------------
 
-        if (iterationCount >= iterationThreshold || error <= errorThreshold) {
+        if (error <= errorThreshold) {
             break;
         }
 
@@ -616,7 +528,7 @@ int main(int argc, char* argv[]) {
     
     }
     
-    // DEBUG INFO -------------------------------------------------------------------------------------------
+    // DEBUG INFO --------------------------------------------------------------------------------------------
 
     std::this_thread::sleep_for(std::chrono::milliseconds(myRank * 250));
 
@@ -631,10 +543,7 @@ int main(int argc, char* argv[]) {
         cout << "Points per Edge: " << pointsPerEdge << endl;
         cout << "Points per Sub Edge: " << pointsPerSubEdge << endl;
         cout << "Points per Ghost Edge: " << pointsPerGhostEdge << endl;
-        cout << endl;
-
-        // Test Purposes
-  
+        cout << endl;  
     
     }
 
@@ -683,8 +592,6 @@ int main(int argc, char* argv[]) {
     cout << "Real Subcube:" << endl;
 
     print(realSubcube, pointsPerSubEdge);
-
-    //print(ghostCube, pointsPerGhostEdge);
 
     // Finalize -------------------------------------------------------------------------------------------
 
