@@ -155,6 +155,8 @@ double fn(int n, int i, int j, int k) {
 
 int main(int argc, char* argv[]) {
 
+    auto start = chrono::high_resolution_clock::now();
+
     // MPI-Initialization -----------------------------------------------------------------------------
 
     int numberOfTasks, myRank;
@@ -390,32 +392,39 @@ int main(int argc, char* argv[]) {
         // Send Up Layer
         if (UP_NEIGHBOUR != -1) {
             MPI_Isend(&subcube[0], 1, XZLayerDataType, UP_NEIGHBOUR, UP_LAYER_TAG, MPI_COMM_WORLD, &upLayerSendRequest);
+            MPI_Request_free(&upLayerSendRequest);
         }
 
         // Send Down Layer
         if (DOWN_NEIGHBOUR != -1) {
             MPI_Isend(&subcube[pointsPerSubEdge * pointsPerSubEdge * (pointsPerSubEdge - 1)], 1, XZLayerDataType, DOWN_NEIGHBOUR, DOWN_LAYER_TAG, MPI_COMM_WORLD, &downLayerSendRequest);
+            MPI_Request_free(&downLayerSendRequest);
         }
 
         // Send Front Layer
         if (FRONT_NEIGHBOUR != -1) {
             MPI_Isend(&subcube[pointsPerSubEdge - 1], 1, XYLayerDataType, FRONT_NEIGHBOUR, FRONT_LAYER_TAG, MPI_COMM_WORLD, &frontLayerSendRequest);
+            MPI_Request_free(&frontLayerSendRequest);
         }
 
         // Send Back Layer
         if (BACK_NEIGHBOUR != -1) {
             MPI_Isend(&subcube[0], 1, XYLayerDataType, BACK_NEIGHBOUR, BACK_LAYER_TAG, MPI_COMM_WORLD, &backLayerSendRequest);
+            MPI_Request_free(&backLayerSendRequest);
         }
 
         // Send Left Layer
         if (LEFT_NEIGHBOUR != -1) {
             MPI_Isend(&subcube[0], 1, YZLayerDataType, LEFT_NEIGHBOUR, LEFT_LAYER_TAG, MPI_COMM_WORLD, &leftLayerSendRequest);
+            MPI_Request_free(&leftLayerSendRequest);
         }
 
         // Send Right Layer
         if (RIGHT_NEIGHBOUR != -1) {
             MPI_Isend(&subcube[pointsPerSubEdge * pointsPerSubEdge - pointsPerSubEdge], 1, YZLayerDataType, RIGHT_NEIGHBOUR, RIGHT_LAYER_TAG, MPI_COMM_WORLD, &rightLayerSendRequest);
+            MPI_Request_free(&rightLayerSendRequest);
         }
+
 
         // Receive Layers -----------------------------------------------------------------------------------------------
 
@@ -556,6 +565,10 @@ int main(int argc, char* argv[]) {
     
     // DEBUG INFO --------------------------------------------------------------------------------------------
 
+    auto end = chrono::high_resolution_clock::now();
+
+    double time_taken = chrono::duration_cast<chrono::nanoseconds>(end - start).count() * 1e-9;
+
     std::this_thread::sleep_for(std::chrono::milliseconds(myRank * 250));
 
     if (myRank == 0) {
@@ -618,6 +631,8 @@ int main(int argc, char* argv[]) {
     cout << "Real Subcube:" << endl;
 
     print(realSubcube, pointsPerSubEdge);
+
+    cout << "Time Taken: " << time_taken << endl;
 
     // Finalize -------------------------------------------------------------------------------------------
 
