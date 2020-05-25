@@ -376,12 +376,15 @@ int main(int argc, char* argv[]) {
     // Main Logic ----------------------------------------------------------------------------------------------------
 
     double error = 0;
-
-    const double errorThreshold = pow(10, -3);
     
     int iterationCount = 0;
 
     //const int iterationThreshold = 1000;
+
+    double previousSubSum = 0;
+    double currentSum = 0;
+
+    const double errorThreshold = pow(10, -3);
 
     while (true) {
 
@@ -528,18 +531,24 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // Calculate Suberror -------------------------------------------------------------------------------------
+        // Calculate Current Sum -------------------------------------------------------------------------------------
 
-        double suberror = 0;
-    
+        double currentSubSum = 0;
+
         for (int i = 0; i < pointsPerSubEdge; i++) {
             for (int j = 0; j < pointsPerSubEdge; j++) {
                 for (int k = 0; k < pointsPerSubEdge; k++) {
                     int flatIndex = calculateFlatIndex(pointsPerSubEdge, i, j, k);
-                    suberror += abs(realSubcube[flatIndex] - subcube[flatIndex]);
+                    currentSubSum += subcube[flatIndex];
                 }
             }
         }
+
+        // Calculate Suberror -------------------------------------------------------------------------------------
+
+        double suberror = currentSubSum - previousSubSum;
+
+        previousSubSum = currentSubSum;
 
         // Synchronize  -------------------------------------------------------------------------------------
 
