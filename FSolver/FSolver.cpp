@@ -59,7 +59,7 @@ void print(double* cube, int pointsPerEdge) {
 
 bool isWholeNumber(double num)
 {
-    return num == static_cast<int>(num);
+    return abs(floor(num + 0.5) - num) < 0.0001;
 }
 
 void calculateMyOffset(int myRank, int cubeDimension, int subcubeDimension, Offset &myOffset) {
@@ -174,7 +174,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    int subcubePerEdge = _subcubePerEdge;
+    int subcubePerEdge = _subcubePerEdge + 0.5;
 
     int n = stoi(argv[1]);
 
