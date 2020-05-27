@@ -167,7 +167,7 @@ int main(int argc, char* argv[]) {
 
     // Points per Edge Calculations -------------------------------------------------------------------------------------
 
-    double _subcubePerEdge = cbrt(numberOfTasks);
+    double _subcubePerEdge = pow(numberOfTasks, 1/3.);
 
     if (!isWholeNumber(_subcubePerEdge)) {
         cout << "cube root of number of tasks is not a whole number!" << endl;
