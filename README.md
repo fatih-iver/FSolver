@@ -44,34 +44,31 @@ This processor has 2 physical and 4 logical cores.
 ```bash
 mpic++ -std=c++11 FSolver.cpp
 
-# No Speed Up (CPU has only 2 physical cores)
-mpirun -np 1 a.out 25 # 6.1544 sn
-mpirun -np 8 a.out 25 # 18.6954 sn
+## 6 Points Per Edge ##
+mpirun -np 1 a.out 5 -> 0.0339636 sn # Base
+mpirun -np 8 a.out 5 -> 0.134244 sn # SpeedUp: 0.253
+mpirun -np 27 a.out 5 -> 0.454991 sn # SpeedUp: 0.075
 
-# No Speed Up (CPU has only 2 physical cores)
-mpirun -np 1 a.out 31 # 16.0943 sn
-mpirun -np 8 a.out 31 # 40.1093 sn
+## 30 Points Per Edge ##
+mpirun -np 1 a.out 29 -> 1.51569 sn # Base
+mpirun -np 8 a.out 29 -> 0.872383 sn # SpeedUp: 1.737
+mpirun -np 27 a.out 29 -> 1.35544 sn # SpeedUp: 1.118
 
-# No Gain (CPU has only 2 physical cores)
-mpirun -np 1 a.out 47 # 132.783 sn
-mpirun -np 8 a.out 47 # 130.29 sn
+## 6O Points Per Edge ##
+mpirun -np 1 a.out 59 -> 70.3674 sn # Base
+mpirun -np 8 a.out 59 -> 24.7332 sn # SpeedUp: 2.845
+mpirun -np 27 a.out 59 -> 26.3868 sn # SpeedUp: 2.667
 
-# Speed Up Ratio: 1.6 (CPU has only 2 physical cores)
-mpirun -np 1 a.out 63 # 599.122 sn
-mpirun -np 8 a.out 63 # 377.707 sn
+## 90 Points Per Edge ##
+mpirun -np 1 a.out 89 -> 560.749 sn # Base
+mpirun -np 8 a.out 89 -> 187.577 sn # SpeedUp: 2.989
+mpirun -np 27 a.out 89 -> 196.726 sn # SpeedUp: 2.850
 
-# Speed Up Ratio: 2.4 (CPU has only 2 physical cores)
-mpirun -np 1 a.out 81 # 2589.78 sn
-mpirun -np 8 a.out 81 # 1100.24 sn
-
-# Speed Up Ratio: 1.9 (CPU has only 2 physical cores)
-mpirun -np 1 a.out 99 #  6407.75 sn
-mpirun -np 8 a.out 99 #  3402.22 sn
 ```
 
 ## Justification
 
-As you can see, there is no performance gain up to a point. The parallel program runs much slower for smaller n. When n gets bigger, performance gains can be observed. 
+As you can see, there is no performance gain up to a point. The parallel program runs much slower for smaller n. When n gets bigger, performance gains can be observed. Speed up is close to 3 beacause the test CPU has 2 physical cores and 4 logical cores. Logical cores are not one to one corresponding of physical cores. In average, with hyper-threading, a machine perform %30 faster. This explains why speed up is around 3. It would be around 2 with no hyper-threading - no logical cores. Also, note that, speed up values for 8 processors and 27 processors are close. This is because they run on the same hardware even though the given processors numbers are different. However, one with the 27 processors performs a little bit worse because communication overhead increases with the number of processors.  
 
 Be careful that, test CPU has only 2 physical cores. This is the main bottleneck and the explanation for the observed speedup values. 
 
